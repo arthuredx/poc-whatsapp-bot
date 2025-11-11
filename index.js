@@ -1,55 +1,97 @@
 import qrcode from "qrcode-terminal";
 import pkg from "whatsapp-web.js";
+import fetch from "node-fetch";
+
 const { Client, LocalAuth } = pkg;
 
-// 🔒 Número autorizado (formato internacional: DDI + DDD + número, sem + ou espaços)
-// Exemplo: (11) 91234-5678 → "5511912345678"
+// 🔒 Lista de números autorizados (DDI + DDD + número)
 const NUMEROS_AUTORIZADOS = [
-  "5512988651997"
-]; // <-- coloque o número que deve receber resposta
+  "5512988651997",
+  "556196182809",
+  "556195976862"  // Outro número (exemplo)
+];
 
+// ⏱️ Controle de tempo (1 minuto por número)
+const ultimoEnvio = new Map();
 
-// Inicializa o cliente com autenticação local
+// 🔑 Sua chave Groq (coloque aqui)
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "SUA_CHHAVE_AQUI";
+
+// Função para gerar resposta com LLaMA 3 via Groq API
+async function responderComGroq(prompt) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-8b-instant", 
+      messages: [
+        {
+          role: "system",
+          content: "Você é o BotCaffê, um assistente WhatsApp simpático, direto e útil. Se fazerem perguntas diga que nao estou disponivel no momento e que verei quando puder. Se cobrarem algo peça para procurar na internet.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 200,
+    }),
+  });
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices[0].message.content.trim();
+}
+
+// Inicializa cliente WhatsApp
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
     headless: true,
-    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // Caminho do Chrome no macOS
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
 });
 
-// Mostra QR Code para conectar
+// Exibe QR Code
 client.on("qr", (qr) => {
   console.log("📱 Escaneie este QR Code com o WhatsApp:");
   qrcode.generate(qr, { small: true });
 });
 
-// Quando logar com sucesso
+// Bot pronto
 client.on("ready", () => {
-  console.log("✅ Bot conectado com sucesso!");
+  console.log("✅ BotCaffê (LLaMA 3) conectado e pronto ☕");
 });
 
-// Quando receber mensagem
+// Mensagem recebida
 client.on("message", async (message) => {
-  // Log simples
-  //console.log(`📩 Mensagem de ${message.from}: ${message.body}`);
+  const numero = message.from.replace("@c.us", "");
+  const texto = message.body.trim();
+  const agora = Date.now();
 
-  // Verifica se o número está na lista de autorizados
-  const autorizado = NUMEROS_AUTORIZADOS.some((num) =>
-    message.from.includes(num)
-  );
+  console.log(`📩 ${numero}: "${texto}"`);
 
-  if (autorizado) {
-    console.log("🟢 Mensagem de número autorizado detectada.");
+  const autorizado = NUMEROS_AUTORIZADOS.some((num) => numero.includes(num));
+  if (!autorizado) return;
 
-    // Responde automaticamente qualquer mensagem
-    const resposta = `Recebi sua mensagem vou ver quando puder agora me deixa em paz 🤖!`;
+  const ultimo = ultimoEnvio.get(numero) || 0;
+  const passouUmMinuto = agora - ultimo >= 60 * 1000;
+  if (!passouUmMinuto) {
+    console.log(`⏳ Ignorado (anti-spam): ${(agora - ultimo) / 1000}s desde última resposta`);
+    return;
+  }
+
+  try {
+    const resposta = await responderComGroq(texto);
     await message.reply(resposta);
-
-    console.log("💬 Resposta enviada com sucesso.");
+    console.log(`💬 Respondido para ${numero}: "${resposta}"`);
+    ultimoEnvio.set(numero, agora);
+  } catch (err) {
+    console.error("❌ Erro ao gerar resposta:", err.message);
+    await message.reply("⚠️ Opa, tive um problema técnico. Tente novamente em instantes.");
   }
 });
 
-// Inicializa o bot
 client.initialize();

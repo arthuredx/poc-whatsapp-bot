@@ -19,6 +19,7 @@ Um bot simples e pessoal para responder automaticamente mensagens recebidas no W
 - [Node.js](https://nodejs.org/) (versão 16 ou superior)  
 - WhatsApp ativo em um smartphone  
 - Ambiente configurado (ex: Visual Studio Code)
+- conta e token da https://console.groq.com/keys 
 
 Verifique se o Node está instalado:
 ```bash
@@ -36,8 +37,15 @@ Instale as dependências:
 bash
 Copiar código
 npm install whatsapp-web.js qrcode-terminal
+npm install node-fetch
 🧩 Configuração
 Abra o arquivo index.js
+
+-- se for usar a integração com chatgpt precisa da chave e instalação do pacote
+npm install openai
+e 
+export OPENAI_API_KEY="sua-chave-aqui"
+(ou crie um arquivo .env e carregue com dotenv, se preferir)
 
 Edite a lista de números autorizados no formato internacional (sem + ou espaços):
 
