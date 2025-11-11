@@ -10,7 +10,7 @@ Um bot simples e pessoal para responder automaticamente mensagens recebidas no W
 - Mantém a sessão salva (não precisa escanear toda vez)  
 - Responde automaticamente **somente para números autorizados**  
 - Loga todas as mensagens recebidas e respostas no terminal  
-- Pode ser facilmente expandido para respostas inteligentes (ex: ChatGPT)
+- Pode usar tanto a versao da OpenAi ou da LLaMA
 
 ---
 
@@ -19,7 +19,7 @@ Um bot simples e pessoal para responder automaticamente mensagens recebidas no W
 - [Node.js](https://nodejs.org/) (versão 16 ou superior)  
 - WhatsApp ativo em um smartphone  
 - Ambiente configurado (ex: Visual Studio Code)
-- conta e token da https://console.groq.com/keys 
+- conta e token da https://console.groq.com/keys api LLaMA ou OpenApi
 
 Verifique se o Node está instalado:
 ```bash
